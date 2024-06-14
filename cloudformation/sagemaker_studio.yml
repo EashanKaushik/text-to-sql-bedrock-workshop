@@ -40,21 +40,11 @@ Parameters:
     Type: String
     NoEcho: true
 
-  LayersBucket:
-    Description: The S3 bucket that contains the Lambda layers
-    Type: String
-    Default: workshopassets-fweredf2h2
-
-  Boto3LayerS3ObjKey:
-    Description: The S3 object key of the boto3 layer
-    Type: String
-    Default: boto3.zip
-
 Resources:
   WorkshopS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-${AWS::AccountId}-workshop
+      BucketName: !Sub ${AWS::Region}-${AWS::AccountId}-workshop
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders:
@@ -78,21 +68,6 @@ Resources:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
             SSEAlgorithm: AES256
-
-  # BucketPolicy:
-  #   Type: AWS::S3::BucketPolicy
-  #   Properties:
-  #     Bucket: !Ref WorkshopS3Bucket
-  #     PolicyDocument:
-  #       Statement:
-  #       - Action:
-  #         - s3:*
-  #         Effect: Allow
-  #         Resource:
-  #         - !Sub ${WorkshopS3Bucket.Arn}
-  #         - !Sub ${WorkshopS3Bucket.Arn}/*
-  #         Principal:
-  #           AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
 
   MyFlowLog:
     Type: AWS::EC2::FlowLog
@@ -377,8 +352,6 @@ Resources:
               - !Sub arn:aws:s3:::${WorkshopS3Bucket}
               - !Sub arn:aws:s3:::${WorkshopS3Bucket}/*
 
-
-
   SageMakerExecutionRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -434,7 +407,7 @@ Resources:
                   - s3:PutObject
                   - s3:GetObject
                   - s3:AbortMultipartUpload
-                  - s3:GetBucketLocatio
+                  - s3:GetBucketLocation
                 Resource: 
                   - !Sub "arn:aws:s3:::${WorkshopS3Bucket}/*"
               - Effect: Allow
@@ -767,51 +740,6 @@ Resources:
         ExecutionRole: !GetAtt SageMakerExecutionRole.Arn
         SecurityGroups:
            - !Ref SageMakerInstanceSecurityGroup
-        # JupyterServerAppSettings:
-        #   DefaultResourceSpec:
-        #     InstanceType: system
-        # KernelGatewayAppSettings:
-        #   DefaultResourceSpec:
-        #     InstanceType: ml.t3.medium
-        #     SageMakerImageArn: !FindInMap 
-        #       - SageMakerImageArns
-        #       - !Ref AWS::Region
-        #       - ImageArn
-
-  # SageMakerJupyterLabSpace:
-  #   Type: AWS::SageMaker::Space
-  #   Properties:
-  #     DomainId: !Ref StudioDomain
-  #     SpaceName: WorkshopSpace
-  #     SpaceSharingSettings:
-  #       SharingType: Private
-  #     SpaceSettings: 
-  #       JupyterServerAppSettings:
-  #         DefaultResourceSpec:
-  #           InstanceType: system
-  #       # JupyterLabAppSettings:
-  #       #   DefaultResourceSpec:
-  #       #     InstanceType: ml.t3.medium
-  #       #     SageMakerImageArn: !FindInMap 
-  #       #       - SageMakerImageArns
-  #       #       - !Ref AWS::Region
-  #       #       - ImageArn
-  #       KernelGatewayAppSettings:
-  #         DefaultResourceSpec:
-  #           InstanceType: ml.t3.medium
-  #           SageMakerImageArn: !FindInMap 
-  #             - SageMakerImageArns
-  #             - !Ref AWS::Region
-  #             - ImageArn
-  
-  CreateSageMakerLayer:
-    Type: AWS::Lambda::LayerVersion
-    Properties:
-      Content: 
-        S3Bucket: !Ref LayersBucket
-        S3Key: !Ref Boto3LayerS3ObjKey
-      Description: Boto3 Latest Version Layer
-      LayerName: Boto3
 
   CreateSageMakerApp:
     Type: Custom::CreateSageMakerApp
@@ -844,8 +772,6 @@ Resources:
       Description: >
         Creates and deletes SageMaker JupyterLab App and space.
       Handler: index.handler
-      Layers:
-        - !GetAtt CreateSageMakerLayer.LayerVersionArn
       Environment:
         Variables:
           SM_IMG_ARN: !FindInMap 
@@ -1091,8 +1017,6 @@ Resources:
       Description: >
         Creates a SageMaker Studio Lifecycle Config and adds it to the specified domain
       Handler: index.handler
-      Layers:
-        - !GetAtt CreateSageMakerLayer.LayerVersionArn
       Environment:
         Variables:
           GIT_REPO: !Ref GitRepositoryUrl
@@ -1206,7 +1130,6 @@ Resources:
                       'statusCode': 200,
                       'body': json.dumps("Doing nothing.")
                     }
-
 
   CreateLifecyleRole:
     Type: AWS::IAM::Role
